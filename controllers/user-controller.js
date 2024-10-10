@@ -74,17 +74,124 @@ const UserController = {
 
 			// подписываем пользователя на подписку на jwt токен
 			const token = jwt.sign({ userId: user.id }, process.env.SECRET_KEY);
-		} catch (e) {}
+
+			res.json({ token: token });
+		} catch (e) {
+			console.error(e);
+			res.status(500).json({ error: "Internal server error" });
+		}
 	},
 
 	getUserById: async (req, res) => {
-		res.send("getUserBy");
+		const { id } = req.params;
+
+		const userId = req.user.userId;
+
+		try {
+			const user = await prisma.user.findUnique({
+				where: { id },
+				include: {
+					followers: true,
+					following: true,
+				},
+			});
+
+			if (!user) {
+				return res.status(404).json({ error: "Пользователь не найден" });
+			}
+
+			/**  Так как запрос будет слаться со стороны авторизованного пользователя
+			то получая в authMiddleware айди пользователя, мы можем узнать
+			подписал ли тот, кто авторизован на пользователя с id, которое
+			получаем из квери */
+
+			const isFollowing = await prisma.follows.findFirst({
+				where: {
+					AND: [{ followerId: userId }, { followingId: id }],
+				},
+			});
+
+			res.json({ ...user, isFollowing: Boolean(isFollowing) });
+		} catch (e) {
+			return res.status(500).json({ error: "Internal server error" });
+		}
 	},
+
 	updateUser: async (req, res) => {
-		res.send("updateUser");
+		const { id } = req.params;
+		const { email, name, dateOfBirth, bio, location } = req.body;
+
+		let filePath;
+		if (req.file && req.file.path) {
+			filePath = req.file.path;
+		}
+
+		if (id !== req.user.userId) {
+			return res.status(403).json({
+				error: "You have not enought permissions to update another user",
+			});
+		}
+
+		try {
+			if (email) {
+				const existedUser = await prisma.user.findFirst({
+					where: { email: email },
+				});
+
+				if (existedUser && existedUser.id !== id) {
+					return res
+						.status(400)
+						.json({ error: "User with this email is exist" });
+				}
+			}
+
+			const user = await prisma.user.update({
+				where: { id },
+				data: {
+					email: email || undefined,
+					name: name || undefined,
+					avatarUrl: filePath ? `/${filePath}` : undefined,
+					dateOfBirth: dateOfBirth || undefined,
+					bio: bio || undefined,
+					location: location || undefined,
+				},
+			});
+
+			res.json(user);
+		} catch (e) {
+			console.error(e);
+			res.status(500).json({ error: "Internal Server Error" });
+		}
 	},
+
 	current: async (req, res) => {
-		res.send("current");
+		/** На основе token получаем user */
+		try {
+			const user = await prisma.user.findUnique({
+				where: { id: req.user.userId },
+				include: {
+					followers: {
+						include: {
+							follower: true,
+						},
+					},
+					following: {
+						include: {
+							following: true,
+						},
+					},
+				},
+			});
+
+			if (!user) {
+				return res.status(400).json({ error: "User not found" });
+			}
+
+			res.json(user);
+		} catch (e) {
+			console.log(e);
+			res.status(500).json({ error: "Internal Server Error" });
+		}
 	},
 };
 
