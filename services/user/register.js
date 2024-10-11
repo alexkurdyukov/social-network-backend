@@ -25,7 +25,7 @@ const register = async (req, res) => {
 
 		// генерируем дефолтную картинку
 		const png = Jdenticon.toPng(name, 200);
-		const avatarName = `${name}_${Date.now()}.png`;
+		const avatarName = `${name}_${Date.now()}.png`; 
 		const avatarPath = path.join(__dirname, "../../uploads", avatarName);
 		fs.writeFileSync(avatarPath, png);
 

@@ -1,9 +1,11 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const UserController = require("../controllers/user-controller");
-const uploadDestination = "uploads";
 const authenticateToken = require("../middleware/auth");
+const UserController = require("../controllers/user-controller");
+const PostController = require("../controllers/post-controller");
+
+const uploadDestination = "uploads";
 
 // создаем хранилище img файлов
 const storage = multer.diskStorage({
@@ -21,5 +23,11 @@ router.post("/login", UserController.login);
 router.get("/current", authenticateToken, UserController.current);
 router.get("/users/:id", authenticateToken, UserController.getUserById);
 router.put("/users/:id", authenticateToken, UserController.updateUser);
+
+// роуты для работы с Posts
+router.post("/posts", authenticateToken, PostController.createPost);
+router.get("/posts", authenticateToken, PostController.getAllPosts);
+router.get("/posts/:id", authenticateToken, PostController.getPostById);
+router.delete("/posts/:id", authenticateToken, PostController.deletePost);
 
 module.exports = router;
