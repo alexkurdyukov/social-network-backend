@@ -103,7 +103,7 @@ const PostController = {
 			if (!post) {
 				return res.status(400).json({ error: "Post doesn't exist" });
 			}
-			console.log("пост который хотим удалить: ", post, "|", userId);
+			
 			if (post.authorId !== userId) {
 				return res.status(403).json({
 					error: "You do not have enought permissions to delete this post",
